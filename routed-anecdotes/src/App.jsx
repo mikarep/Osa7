@@ -1,5 +1,11 @@
 import { useState } from 'react'
 
+import {
+  BrowserRouter as Router,
+  Routes, Route, Link, useParams, useNavigate
+} from 'react-router-dom'
+import { useField } from './hooks'
+
 const Menu = () => {
   const padding = {
     paddingRight: 5
@@ -17,7 +23,7 @@ const AnecdoteList = ({ anecdotes }) => (
   <div>
     <h2>Anecdotes</h2>
     <ul>
-      {anecdotes.map(anecdote => <li key={anecdote.id} >{anecdote.content}</li>)}
+      {anecdotes.map(anecdote => <li key={anecdote.id} ><Link to={`/anecdotes/${anecdote.id}`}>{anecdote.content}</Link></li>)}
     </ul>
   </div>
 )
@@ -45,42 +51,68 @@ const Footer = () => (
 )
 
 const CreateNew = (props) => {
-  const [content, setContent] = useState('')
-  const [author, setAuthor] = useState('')
-  const [info, setInfo] = useState('')
+  const navigate = useNavigate()
+  const contentField = useField('content')
+  const authorField = useField('author')
+  const infoField = useField('info')
 
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const content = contentField.value
+    const author = authorField.value
+    const info = infoField.value
     props.addNew({
       content,
       author,
       info,
       votes: 0
     })
+    const message = `a new anecdote ${content} created!`
+    props.showAlert(message)
+    navigate('/')
+  }
+
+  const resetAllFields = () => {
+    contentField.reset()
+    authorField.reset()
+    infoField.reset()
   }
 
   return (
     <div>
       <h2>create a new anecdote</h2>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} onReset={resetAllFields}>
         <div>
           content
-          <input name='content' value={content} onChange={(e) => setContent(e.target.value)} />
+          <input {...((({ reset, ...rest }) => rest)(contentField))} />
         </div>
         <div>
           author
-          <input name='author' value={author} onChange={(e) => setAuthor(e.target.value)} />
+          <input {...((({ reset, ...rest }) => rest)(authorField))} />
         </div>
         <div>
           url for more info
-          <input name='info' value={info} onChange={(e)=> setInfo(e.target.value)} />
+          <input {...((({ reset, ...rest }) => rest)(infoField))} />
         </div>
-        <button>create</button>
+        <button type="submit">create</button>
+        <button type="reset">reset</button>
       </form>
     </div>
   )
 
+}
+
+const Anecdote = ({anecdotes}) => {
+  const id = useParams().id
+  const anecdote = anecdotes.find(a => a.id === Number(id))
+  return (
+    <div>
+      <h2>{anecdote.content} by {anecdote.author}</h2>
+      <div>has {anecdote.votes} votes</div>
+      <div>for more info see <a href={anecdote.info}>{anecdote.info}</a></div>
+    </div>
+  )
 }
 
 const App = () => {
@@ -103,9 +135,20 @@ const App = () => {
 
   const [notification, setNotification] = useState('')
 
+  const padding = {
+    paddingRight: 5
+  }
+
   const addNew = (anecdote) => {
     anecdote.id = Math.round(Math.random() * 10000)
     setAnecdotes(anecdotes.concat(anecdote))
+  }
+
+  const showAlert = (m) => {
+    setNotification(m)
+    setTimeout(() => {
+      setNotification()
+    }, 5000)
   }
 
   const anecdoteById = (id) =>
@@ -123,6 +166,34 @@ const App = () => {
   }
 
   return (
+    <Router>
+      <div>
+        <h1>Software anecdotes</h1>
+      </div>
+      <div>
+        <Link style={padding} to="/">anecdotes</Link>
+        <Link style={padding} to="/create">create new</Link>
+        <Link style={padding} to="/about">about</Link>
+      </div>
+
+      <div>
+        {notification}
+      </div>
+
+      <Routes>
+        <Route path="/anecdotes/:id" element={<Anecdote anecdotes={anecdotes} />}/>
+        <Route path="/create" element={<CreateNew addNew={addNew} showAlert={showAlert} />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/" element={<AnecdoteList anecdotes={anecdotes} />} />
+      </Routes>
+
+      <div>
+        <Footer />
+      </div>
+    </Router>
+  )
+
+  /*return (
     <div>
       <h1>Software anecdotes</h1>
       <Menu />
@@ -131,7 +202,7 @@ const App = () => {
       <CreateNew addNew={addNew} />
       <Footer />
     </div>
-  )
+  )*/
 }
 
 export default App
